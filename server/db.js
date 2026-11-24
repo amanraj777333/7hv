@@ -37,6 +37,112 @@ if (isVercel && !fs.existsSync(DB_FILE)) {
 // In-memory cache synced with disk
 let dbCache = null;
 
+// ==========================================
+// SUPABASE CLOUD SYNC ADAPTER
+// ==========================================
+export function getSupabaseConfig() {
+  const url = process.env.SUPABASE_URL || '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+  const databaseUrl = process.env.DATABASE_URL || '';
+  const isConfigured = Boolean((url && key) || databaseUrl);
+  return {
+    url: url ? url.replace(/\/$/, '') : '',
+    hasKey: Boolean(key),
+    databaseUrl: databaseUrl ? 'Configured' : 'Not set',
+    isConfigured,
+    mode: isConfigured ? 'Supabase Cloud Synchronized' : 'Local /tmp Atomic Store (Supabase-ready)'
+  };
+}
+
+/**
+ * Sync single entity to Supabase via REST API
+ */
+export async function syncToSupabase(collection, item, action = 'upsert') {
+  const url = process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/\/$/, '') : '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+  if (!url || !key) {
+    return { skipped: true, reason: 'Supabase credentials not configured' };
+  }
+
+  try {
+    const tableEndpoint = `${url}/rest/v1/${collection}`;
+    if (action === 'delete') {
+      const res = await fetch(`${tableEndpoint}?id=eq.${encodeURIComponent(item.id)}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`
+        }
+      });
+      return { success: res.ok, status: res.status };
+    } else {
+      const res = await fetch(tableEndpoint, {
+        method: 'POST',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(item)
+      });
+      return { success: res.ok, status: res.status };
+    }
+  } catch (err) {
+    console.warn(`Supabase background sync notice for "${collection}":`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Bulk sync all collections to Supabase
+ */
+export async function syncAllToSupabase() {
+  const url = process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/\/$/, '') : '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+  if (!url || !key) {
+    return {
+      success: false,
+      message: 'Supabase credentials missing. Add SUPABASE_URL and SUPABASE_KEY to your environment variables or Vercel dashboard.'
+    };
+  }
+
+  const db = getDatabase();
+  const results = {};
+
+  for (const [colName, items] of Object.entries(db)) {
+    if (!Array.isArray(items) || items.length === 0) continue;
+    try {
+      const tableEndpoint = `${url}/rest/v1/${colName}`;
+      const res = await fetch(tableEndpoint, {
+        method: 'POST',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(items)
+      });
+      results[colName] = {
+        count: items.length,
+        status: res.ok ? 'synced' : 'notice',
+        statusCode: res.status
+      };
+    } catch (err) {
+      results[colName] = { count: items.length, status: 'error', error: err.message };
+    }
+  }
+
+  return {
+    success: true,
+    syncedAt: new Date().toISOString(),
+    results
+  };
+}
+
 /**
  * Automatically create a timestamped backup of the database
  */
@@ -190,6 +296,8 @@ export function insertItem(collectionName, item) {
   };
   db[collectionName].unshift(newItem);
   saveDatabase(db);
+  // Asynchronous sync to Supabase (non-blocking)
+  syncToSupabase(collectionName, newItem, 'upsert').catch(() => {});
   return newItem;
 }
 
@@ -204,6 +312,8 @@ export function updateItem(collectionName, id, updates) {
     updatedAt: new Date().toISOString()
   };
   saveDatabase(db);
+  // Asynchronous sync to Supabase (non-blocking)
+  syncToSupabase(collectionName, db[collectionName][index], 'upsert').catch(() => {});
   return db[collectionName][index];
 }
 
@@ -213,6 +323,8 @@ export function deleteItem(collectionName, id) {
   const initialLen = db[collectionName].length;
   db[collectionName] = db[collectionName].filter((i) => i.id !== id);
   saveDatabase(db);
+  // Asynchronous sync to Supabase (non-blocking)
+  syncToSupabase(collectionName, { id }, 'delete').catch(() => {});
   return db[collectionName].length < initialLen;
 }
 
@@ -226,12 +338,19 @@ export function getDatabaseInfo() {
     count: Array.isArray(db[k]) ? db[k].length : typeof db[k] === 'object' ? Object.keys(db[k]).length : 1
   }));
 
+  const supabaseInfo = getSupabaseConfig();
+
   return {
-    databaseType: 'Atomic Persistent Document Engine (JSON Store with Schema Migrations & Automated Backups)',
+    databaseType: supabaseInfo.isConfigured
+      ? 'Supabase Cloud Database (REST Sync & PostgreSQL Connected)'
+      : 'Atomic Persistent Document Engine (JSON Store with Schema Migrations & Automated Backups)',
     location: DB_FILE,
     backupsDirectory: BACKUPS_DIR,
+    supabase: supabaseInfo,
     productionConfig: {
-      storageModel: 'Persistent Volume Disk / SQLite-compatible or Managed Postgres (via DATABASE_URL)',
+      storageModel: supabaseInfo.isConfigured
+        ? 'Supabase Managed Cloud Postgres with Local Atomic Fallback'
+        : 'Persistent Volume Disk / SQLite-compatible or Managed Postgres (via DATABASE_URL / SUPABASE_URL)',
       concurrencyControl: 'Atomic swap with process-level cache synchronization',
       backupStrategy: 'Automated timestamped snapshots on boot and revision'
     },

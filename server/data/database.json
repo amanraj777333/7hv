@@ -238,96 +238,6 @@
   ],
   "events": [
     {
-      "title": "7H Test Cohort — Automated Validation",
-      "type": "Founder Connect",
-      "city": "Gurugram",
-      "date": "Saturday, August 29, 2026",
-      "time": "4:00 PM – 7:00 PM IST",
-      "location": "One Horizon Center, Golf Course Rd",
-      "status": "Upcoming",
-      "capacity": "40 Founders",
-      "adminUser": "Verification Test",
-      "id": "eve-1795352088595-455",
-      "createdAt": "2026-11-22T12:54:48.595Z",
-      "registeredCount": 1,
-      "updatedAt": "2026-11-22T12:54:48.605Z"
-    },
-    {
-      "title": "7H Test Cohort — Automated Validation",
-      "type": "Founder Connect",
-      "city": "Gurugram",
-      "date": "Saturday, August 29, 2026",
-      "time": "4:00 PM – 7:00 PM IST",
-      "location": "One Horizon Center, Golf Course Rd",
-      "status": "Upcoming",
-      "capacity": "40 Founders",
-      "adminUser": "Verification Test",
-      "id": "eve-1795350750129-109",
-      "createdAt": "2026-11-22T12:32:30.129Z",
-      "registeredCount": 1,
-      "updatedAt": "2026-11-22T12:32:30.139Z"
-    },
-    {
-      "title": "7H Test Cohort — Automated Validation",
-      "type": "Founder Connect",
-      "city": "Gurugram",
-      "date": "Saturday, August 29, 2026",
-      "time": "4:00 PM – 7:00 PM IST",
-      "location": "One Horizon Center, Golf Course Rd",
-      "status": "Upcoming",
-      "capacity": "40 Founders",
-      "adminUser": "Verification Test",
-      "id": "eve-1795350658784-437",
-      "createdAt": "2026-11-22T12:30:58.784Z",
-      "registeredCount": 1,
-      "updatedAt": "2026-11-22T12:30:58.793Z"
-    },
-    {
-      "title": "7H Test Cohort — Automated Validation",
-      "type": "Founder Connect",
-      "city": "Gurugram",
-      "date": "Saturday, August 29, 2026",
-      "time": "4:00 PM – 7:00 PM IST",
-      "location": "One Horizon Center, Golf Course Rd",
-      "status": "Upcoming",
-      "capacity": "40 Founders",
-      "adminUser": "Verification Test",
-      "id": "eve-1795349625055-417",
-      "createdAt": "2026-11-22T12:13:45.055Z",
-      "registeredCount": 1,
-      "updatedAt": "2026-11-22T12:13:45.065Z"
-    },
-    {
-      "title": "7H Test Cohort — Automated Validation",
-      "type": "Founder Connect",
-      "city": "Gurugram",
-      "date": "Saturday, August 29, 2026",
-      "time": "4:00 PM – 7:00 PM IST",
-      "location": "One Horizon Center, Golf Course Rd",
-      "status": "Upcoming",
-      "capacity": "40 Founders",
-      "adminUser": "Verification Test",
-      "id": "eve-1795349062411-431",
-      "createdAt": "2026-11-22T12:04:22.411Z",
-      "registeredCount": 1,
-      "updatedAt": "2026-11-22T12:04:22.420Z"
-    },
-    {
-      "title": "7H Test Cohort — Automated Validation",
-      "type": "Founder Connect",
-      "city": "Gurugram",
-      "date": "Saturday, August 29, 2026",
-      "time": "4:00 PM – 7:00 PM IST",
-      "location": "One Horizon Center, Golf Course Rd",
-      "status": "Upcoming",
-      "capacity": "40 Founders",
-      "adminUser": "Verification Test",
-      "id": "eve-1795349027472-408",
-      "createdAt": "2026-11-22T12:03:47.472Z",
-      "registeredCount": 1,
-      "updatedAt": "2026-11-22T12:03:47.482Z"
-    },
-    {
       "id": "evt-01",
       "slug": "founders-builders-roundtable",
       "title": "7H Founder Connect — Founders & Builders Roundtable",
@@ -390,7 +300,13 @@
         "Early Stage",
         "Founder Roundtable",
         "In-Person"
-      ]
+      ],
+      "isFree": true,
+      "price": 0,
+      "originalPrice": 0,
+      "currency": "INR",
+      "offerText": "Curated Free Access with RSVP",
+      "ticketBadge": "Complimentary Founder Pass"
     },
     {
       "id": "evt-02",
@@ -460,7 +376,13 @@
         "Pitch Showcase",
         "Seed Capital",
         "In-Person"
-      ]
+      ],
+      "isFree": false,
+      "price": 1499,
+      "originalPrice": 2999,
+      "currency": "INR",
+      "offerText": "Early Bird 50% Off (Showcase Pass)",
+      "ticketBadge": "Delegate Pass"
     },
     {
       "id": "evt-03",
@@ -521,7 +443,13 @@
         "Online Masterclass",
         "Legal & Tax",
         "ESOPs"
-      ]
+      ],
+      "isFree": false,
+      "price": 499,
+      "originalPrice": 999,
+      "currency": "INR",
+      "offerText": "Limited Seats • 50% Discount",
+      "ticketBadge": "Masterclass Pass"
     },
     {
       "id": "evt-04",
@@ -580,10 +508,33 @@
         "Hybrid Session",
         "SaaS & Growth",
         "Completed"
-      ]
+      ],
+      "isFree": true,
+      "price": 0,
+      "originalPrice": 0,
+      "currency": "INR",
+      "offerText": "Free Community Access",
+      "ticketBadge": "Archived Session"
     }
   ],
   "registrations": [
+    {
+      "passId": "7H-PASS-350845",
+      "eventId": "evt-02",
+      "eventTitle": "7H Pitch & Capital Connect",
+      "name": "Priya Sharma",
+      "email": "priya@startup.in",
+      "phone": "+91 98765 43210",
+      "company": "Nexus Logix",
+      "role": "Founder / CEO",
+      "paymentStatus": "PAID",
+      "orderId": "order_7h_1795515177834_260",
+      "paymentId": "cf_pay_test_123",
+      "amountPaid": 1499,
+      "checkedIn": false,
+      "id": "regi-1795515177844-121",
+      "createdAt": "2026-11-24T10:12:57.844Z"
+    },
     {
       "eventId": "eve-1795352088595-455",
       "eventTitle": "7H Test Cohort — Automated Validation",
@@ -1619,6 +1570,14 @@
   },
   "audit_logs": [
     {
+      "user": "Payment System",
+      "action": "CASHFREE_PAYMENT_SUCCESS",
+      "details": "Pass 7H-PASS-350845 issued for priya@startup.in (Amount: ₹1499)",
+      "timestamp": "2026-11-24T10:12:57.846Z",
+      "id": "audi-1795515177847-671",
+      "createdAt": "2026-11-24T10:12:57.847Z"
+    },
+    {
       "user": "Ecosystem Admin",
       "action": "Database Backup",
       "details": "Manual backup created: database-backup-2026-11-22T13-36-06-976Z.json",
@@ -2206,6 +2165,25 @@
       "questionsForSpeaker": "How do convertible debt interest rates affect equity dilution during a down round?",
       "status": "confirmed",
       "registeredAt": "2026-03-02T10:30:00.000Z"
+    }
+  ],
+  "payments": [
+    {
+      "orderId": "order_7h_1795515177834_260",
+      "paymentId": "cf_pay_test_123",
+      "eventId": "evt-02",
+      "eventTitle": "7H Pitch & Capital Connect",
+      "amount": 1499,
+      "currency": "INR",
+      "status": "PAID",
+      "gateway": "Cashfree Payments",
+      "customerName": "Priya Sharma",
+      "customerEmail": "priya@startup.in",
+      "customerPhone": "+91 98765 43210",
+      "passId": "7H-PASS-350845",
+      "timestamp": "2026-11-24T10:12:57.840Z",
+      "id": "paym-1795515177840-689",
+      "createdAt": "2026-11-24T10:12:57.840Z"
     }
   ]
 }

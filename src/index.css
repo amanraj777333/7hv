@@ -55,6 +55,51 @@ html {
   color: var(--text-main);
 }
 
+/* =========================================================================
+   FORM INPUT CONTRAST: Guarantee readable black text on all light inputs
+   ========================================================================= */
+input, textarea, select {
+  color: #101010 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #78716c !important;
+}
+
+/* Explicit dark inputs in dark console or search bars */
+.admin-input,
+.dark-input,
+input[class*="bg-[#1"], textarea[class*="bg-[#1"], select[class*="bg-[#1"],
+input[class*="bg-[#0"], textarea[class*="bg-[#0"], select[class*="bg-[#0"],
+input[class*="bg-[#2"], textarea[class*="bg-[#2"], select[class*="bg-[#2"],
+input[class*="bg-black"], textarea[class*="bg-black"], select[class*="bg-black"],
+input[class*="bg-stone-9"], textarea[class*="bg-stone-9"], select[class*="bg-stone-9"] {
+  color: #F7F5F0 !important;
+}
+
+/* Print styling for downloadable / printable event tickets */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-ticket, #printable-ticket * {
+    visibility: visible;
+  }
+  #printable-ticket {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 700px !important;
+    margin: 0 auto !important;
+    padding: 24px !important;
+    background: #141414 !important;
+    color: #F7F5F0 !important;
+    border: 2px solid #C5A46D !important;
+    box-shadow: none !important;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;
