@@ -5,9 +5,13 @@ import { INITIAL_SEED_DATA } from './seedData.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, 'data');
+
+// On Vercel serverless environments, file writing is restricted to /tmp
+const isVercel = process.env.VERCEL === '1';
+const DATA_DIR = isVercel ? path.join('/tmp', '7h_data') : path.join(__dirname, 'data');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
-const DB_FILE = path.join(DATA_DIR, 'database.json');
+export const DB_FILE = path.join(DATA_DIR, 'database.json');
+const SEED_FILE = path.join(__dirname, 'data', 'database.json');
 
 // Ensure data and backup directories exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -15,6 +19,19 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 if (!fs.existsSync(BACKUPS_DIR)) {
   fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+}
+
+// On Vercel, copy seeded database.json to /tmp if not yet present
+if (isVercel && !fs.existsSync(DB_FILE)) {
+  if (fs.existsSync(SEED_FILE)) {
+    try {
+      fs.copyFileSync(SEED_FILE, DB_FILE);
+    } catch {
+      fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_SEED_DATA, null, 2));
+    }
+  } else {
+    fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_SEED_DATA, null, 2));
+  }
 }
 
 // In-memory cache synced with disk

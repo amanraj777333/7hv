@@ -25,8 +25,9 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || '7h-v-secret-jwt-key-2026-production-grade';
 const OFFICIAL_WHATSAPP_LINK = 'https://chat.whatsapp.com/IzTObDPm8pw80Hw811RJvC?s=cl&p=a&iam=2';
 
-// Uploads directory
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+// Uploads directory (supports /tmp on Vercel)
+const isVercel = process.env.VERCEL === '1';
+const UPLOADS_DIR = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -841,9 +842,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
-// Start Express Server
-app.listen(PORT, () => {
-  console.log(`7 Horse Ventures Server running on http://localhost:${PORT}`);
-  console.log(`- Database: Persistent Atomic JSON Engine (${path.join(__dirname, 'data', 'database.json')})`);
-  console.log(`- Official WhatsApp: ${OFFICIAL_WHATSAPP_LINK}`);
-});
+// Export app for Vercel Serverless Function & testing
+export default app;
+
+// Start Express Server when running as standalone service
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`7 Horse Ventures Server running on http://localhost:${PORT}`);
+    console.log(`- Official WhatsApp: ${OFFICIAL_WHATSAPP_LINK}`);
+  });
+}

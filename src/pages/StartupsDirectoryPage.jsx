@@ -100,7 +100,7 @@ export default function StartupsDirectoryPage() {
         </div>
       </section>
 
-      <section className="py-6 bg-white border-b border-[#E8E5DF] sticky top-[65px] z-30 shadow-xs">
+      <section className="py-6 bg-white border-b border-[#E8E5DF] sticky top-[72px] z-30 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-80">

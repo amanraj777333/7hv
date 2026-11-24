@@ -5,7 +5,8 @@ import Footer from './components/Footer';
 import AnnouncementBar from './components/AnnouncementBar';
 import EventModal from './components/EventModal';
 import SignInModal from './components/SignInModal';
-import SoothingVoiceWidget from './components/SoothingVoiceWidget';
+import WhatsAppJoinModal from './components/WhatsAppJoinModal';
+import FloatingWhatsAppCTA from './components/FloatingWhatsAppCTA';
 import Toast from './components/Toast';
 import PageTransition from './components/PageTransition';
 
@@ -112,6 +113,7 @@ function AppContent() {
         return <CommunityPage />;
       case '/contact':
         return <ContactPage />;
+      case '/privacy':
       case '/privacy-policy':
         return <PrivacyPage />;
       case '/terms':
@@ -155,14 +157,14 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col theme-surface transition-colors duration-200 selection:bg-[#C5A46D] selection:text-[#101010]">
-      {/* Top Announcement Ribbon */}
-      <AnnouncementBar />
-
-      {/* Persistent Sticky Navbar */}
+      {/* Persistent Fixed Header */}
       <Navbar />
 
-      {/* Main Page Body with Smooth Page Transitions */}
-      <main className="flex-1">
+      {/* Main Page Body with top spacing to prevent overlapping fixed header */}
+      <main className="flex-1 pt-[72px]">
+        {/* Top Announcement Ribbon directly below fixed header */}
+        <AnnouncementBar />
+
         <PageTransition key={currentPath}>
           {renderPage()}
         </PageTransition>
@@ -174,11 +176,11 @@ function AppContent() {
       {/* Interactive Modal for Event Details & Registration Pass */}
       <EventModal />
 
-      {/* Sign In Modal */}
-      <SignInModal />
+      {/* WhatsApp Community Join Popup (delayed entrance & persistent dismissal) */}
+      <WhatsAppJoinModal />
 
-      {/* Floating Soothing Voice Narration & Harmonic Audio Widget */}
-      <SoothingVoiceWidget />
+      {/* Floating Hover Expandable WhatsApp Community CTA */}
+      <FloatingWhatsAppCTA />
 
       {/* Dynamic Toast Notifications */}
       <Toast />

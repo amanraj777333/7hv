@@ -85,7 +85,7 @@ export default function AcademyPage() {
       </section>
 
       {/* Sessions Browser Navigation */}
-      <section id="sessions-browser" className={`py-6 border-b sticky top-[65px] z-30 shadow-xs transition-colors duration-200 ${
+      <section id="sessions-browser" className={`py-6 border-b sticky top-[72px] z-30 shadow-xs transition-colors duration-200 ${
         isDark ? 'bg-[#141414]/95 border-[#242424] backdrop-blur-md' : 'bg-white/95 border-[#E8E5DF] backdrop-blur-md'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

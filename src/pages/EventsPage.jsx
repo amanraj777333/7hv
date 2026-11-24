@@ -76,7 +76,7 @@ export default function EventsPage() {
       </section>
 
       {/* Filter Bar */}
-      <section className="py-4 bg-white border-b border-[#E8E5DF] sticky top-[65px] z-30 shadow-xs">
+      <section className="py-4 bg-white border-b border-[#E8E5DF] sticky top-[72px] z-30 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             

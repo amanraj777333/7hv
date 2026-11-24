@@ -1,10 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { INITIAL_EVENTS } from '../data/initialData';
-import {
-  startSmoothingVoice,
-  stopSmoothingVoice,
-  isSmoothingVoiceActive
-} from '../utils/soothingVoice';
 
 const AppContext = createContext();
 
@@ -54,29 +49,6 @@ export function AppProvider({ children }) {
 
   const toggleTheme = () => {
     // Locked to Black Theme per brand standards
-  };
-
-  // 2b. Soothing Voice Audio Guide State
-  const [isVoicePlaying, setIsVoicePlaying] = useState(false);
-
-  const toggleVoice = () => {
-    if (isVoicePlaying) {
-      stopSmoothingVoice();
-      setIsVoicePlaying(false);
-    } else {
-      const started = startSmoothingVoice(
-        () => setIsVoicePlaying(true),
-        () => setIsVoicePlaying(false)
-      );
-      if (started) {
-        setIsVoicePlaying(true);
-      }
-    }
-  };
-
-  const stopVoice = () => {
-    stopSmoothingVoice();
-    setIsVoicePlaying(false);
   };
 
   // 3. Central Media & Visual Mapping State
@@ -505,10 +477,6 @@ export function AppProvider({ children }) {
         theme: 'dark',
         setTheme: () => {},
         toggleTheme,
-        // Soothing Voice Audio Guide
-        isVoicePlaying,
-        toggleVoice,
-        stopVoice,
         // Official WhatsApp Link & Helper
         officialWhatsAppLink: OFFICIAL_WHATSAPP_LINK,
         openWhatsAppCommunity,
