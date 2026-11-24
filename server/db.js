@@ -222,7 +222,14 @@ export function getDatabase() {
     'website_settings',
     'users',
     'analytics',
-    'audit_logs'
+    'audit_logs',
+    'payments',
+    'email_templates',
+    'email_automations',
+    'email_segments',
+    'email_campaigns',
+    'email_logs',
+    'email_unsubscribes'
   ];
 
   requiredCollections.forEach((col) => {
@@ -317,15 +324,46 @@ export function updateItem(collectionName, id, updates) {
   return db[collectionName][index];
 }
 
-export function deleteItem(collectionName, id) {
+export function deleteItem(collectionName, id, soft = true, user = 'Admin') {
   const db = getDatabase();
   if (!db[collectionName]) return false;
-  const initialLen = db[collectionName].length;
-  db[collectionName] = db[collectionName].filter((i) => i.id !== id);
+  const index = db[collectionName].findIndex((i) => i.id === id);
+  if (index === -1) return false;
+
+  if (soft) {
+    db[collectionName][index] = {
+      ...db[collectionName][index],
+      isDeleted: true,
+      deletedAt: new Date().toISOString(),
+      deletedBy: user
+    };
+    saveDatabase(db);
+    syncToSupabase(collectionName, db[collectionName][index], 'upsert').catch(() => {});
+    return true;
+  } else {
+    // Permanent deletion
+    db[collectionName].splice(index, 1);
+    saveDatabase(db);
+    syncToSupabase(collectionName, { id }, 'delete').catch(() => {});
+    return true;
+  }
+}
+
+export function restoreItem(collectionName, id, user = 'Admin') {
+  const db = getDatabase();
+  if (!db[collectionName]) return null;
+  const index = db[collectionName].findIndex((i) => i.id === id);
+  if (index === -1) return null;
+
+  db[collectionName][index] = {
+    ...db[collectionName][index],
+    isDeleted: false,
+    restoredAt: new Date().toISOString(),
+    restoredBy: user
+  };
   saveDatabase(db);
-  // Asynchronous sync to Supabase (non-blocking)
-  syncToSupabase(collectionName, { id }, 'delete').catch(() => {});
-  return db[collectionName].length < initialLen;
+  syncToSupabase(collectionName, db[collectionName][index], 'upsert').catch(() => {});
+  return db[collectionName][index];
 }
 
 /**

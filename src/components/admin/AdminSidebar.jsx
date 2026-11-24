@@ -81,6 +81,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, currentUser, onL
     {
       label: 'Pipeline & CRM',
       items: [
+        { id: 'crm_email_studio', label: 'CRM Email Studio', icon: Mail },
         { id: 'pitch_applications', label: 'Pitch Applications', icon: FileText },
         { id: 'partnerships_crm', label: 'Partnership CRM', icon: Building2 },
         { id: 'enquiries', label: 'Contact Enquiries', icon: Inbox }
@@ -95,6 +96,20 @@ export default function AdminSidebar({ activeTab, setActiveTab, currentUser, onL
       ]
     }
   ];
+
+  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.assignedModules?.includes('*') || !currentUser?.assignedModules;
+  const allowed = currentUser?.assignedModules || ['*'];
+
+  const filteredNavSections = navSections
+    .map((sec) => ({
+      ...sec,
+      items: sec.items.filter((item) => {
+        if (item.id === 'dashboard') return true;
+        if (isSuperAdmin) return true;
+        return allowed.includes(item.id);
+      })
+    }))
+    .filter((sec) => sec.items.length > 0);
 
   return (
     <aside className="w-64 bg-[#101010] text-[#E8E5DF] border-r border-[#262626] flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none overflow-y-auto">
@@ -130,7 +145,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, currentUser, onL
 
         {/* Navigation Sections */}
         <div className="p-3 space-y-4 text-xs">
-          {navSections.map((sec) => (
+          {filteredNavSections.map((sec) => (
             <div key={sec.label} className="space-y-1">
               <div className="px-2 py-1 text-[10px] font-medium text-stone-500 font-mono">
                 {sec.label}

@@ -1497,22 +1497,243 @@
       "name": "Ecosystem Admin",
       "email": "admin@7horseventures.com",
       "role": "Super Admin",
-      "passcode": "9ae0f5147c240362437d415837d2bf93:2d7097cafff4e2bd0db5e0c1cea981bc148c50c79276ef7ba6068e4db5ac19ae17b83771aeb2e52854b7a397c5535a059e3942af03f0b86a148cdb2c80d462d1",
+      "passcode": "7horse2026",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-      "createdAt": "2026-03-01T08:00:00.000Z",
-      "passwordHash": "992fdf666dfd7dcaac4ad40aae49f1e3:cefb1b9f70b8db17614f07630e9be3e98c393235be2bf3aa19fb48df72458c40865db2e68676ee7343b3a5f60cbdabba3826f80e389f2477532afa2ec80aea7b",
-      "updatedAt": "2026-11-22T13:36:06.933Z"
+      "assignedModules": [
+        "*"
+      ],
+      "permissions": {
+        "*": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": true
+        }
+      },
+      "lastLogin": "2026-03-04T12:00:00.000Z",
+      "createdAt": "2026-03-01T08:00:00.000Z"
     },
     {
       "id": "usr-02",
-      "name": "Content Editor",
-      "email": "editor@7horseventures.com",
-      "role": "Editor",
+      "name": "Aman Sharma (Events Lead)",
+      "email": "aman@7horseventures.com",
+      "role": "Event Manager",
       "passcode": "7horse2026",
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
+      "assignedModules": [
+        "events",
+        "registrations",
+        "academy_sessions"
+      ],
+      "permissions": {
+        "events": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": true
+        },
+        "registrations": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": false,
+          "settings": false
+        },
+        "academy_sessions": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        }
+      },
+      "lastLogin": "2026-03-03T16:30:00.000Z",
       "createdAt": "2026-03-01T08:30:00.000Z"
+    },
+    {
+      "id": "usr-03",
+      "name": "Rhea Kapoor (Community Lead)",
+      "email": "rhea@7horseventures.com",
+      "role": "Community Moderator",
+      "passcode": "7horse2026",
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80",
+      "assignedModules": [
+        "founders_dir",
+        "startups_dir",
+        "opportunities"
+      ],
+      "permissions": {
+        "founders_dir": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        },
+        "startups_dir": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        },
+        "opportunities": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        }
+      },
+      "lastLogin": "2026-03-04T09:15:00.000Z",
+      "createdAt": "2026-03-01T09:00:00.000Z"
+    },
+    {
+      "id": "usr-04",
+      "name": "Vikram Seth (Marketing Lead)",
+      "email": "vikram@7horseventures.com",
+      "role": "Marketing Manager",
+      "passcode": "7horse2026",
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80",
+      "assignedModules": [
+        "articles",
+        "newsletter",
+        "subscribers",
+        "crm_email_studio"
+      ],
+      "permissions": {
+        "articles": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        },
+        "newsletter": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        },
+        "subscribers": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": false,
+          "settings": false
+        },
+        "crm_email_studio": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": true
+        }
+      },
+      "lastLogin": "2026-03-02T11:45:00.000Z",
+      "createdAt": "2026-03-01T09:30:00.000Z"
+    },
+    {
+      "id": "usr-05",
+      "name": "Neha Gupta (Partnerships Lead)",
+      "email": "neha@7horseventures.com",
+      "role": "Partnerships Manager",
+      "passcode": "7horse2026",
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80",
+      "assignedModules": [
+        "partnerships_crm",
+        "enquiries",
+        "pitch_applications"
+      ],
+      "permissions": {
+        "partnerships_crm": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": true,
+          "settings": false
+        },
+        "enquiries": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": false,
+          "settings": false
+        },
+        "pitch_applications": {
+          "view": true,
+          "create": true,
+          "edit": true,
+          "delete": true,
+          "import": true,
+          "export": true,
+          "approve": true,
+          "publish": false,
+          "settings": false
+        }
+      },
+      "lastLogin": "2026-03-03T14:20:00.000Z",
+      "createdAt": "2026-03-01T10:00:00.000Z"
     }
   ],
   "analytics": {
@@ -2185,5 +2406,393 @@
       "id": "paym-1795515177840-689",
       "createdAt": "2026-11-24T10:12:57.840Z"
     }
-  ]
+  ],
+  "email_templates": [
+    {
+      "id": "tpl-01",
+      "name": "Event Booking Confirmation",
+      "category": "Event Booking",
+      "subject": "Confirmed: Your Official Executive Pass for {{event_name}}",
+      "body": "<h2>7 HORSE VENTURES</h2>\n<p>Dear {{first_name}},</p>\n<p>Your delegate pass for <strong>{{event_name}}</strong> has been confirmed.</p>\n<div style=\"background:#141414;color:#F7F5F0;padding:20px;border-radius:12px;border:1px solid #C5A46D;\">\n  <p><strong>Pass Reference:</strong> {{ticket_reference}}</p>\n  <p><strong>Date & Time:</strong> {{event_date}} at {{event_time}}</p>\n  <p><strong>Venue / Location:</strong> {{event_location}}</p>\n  <p><strong>Attendee:</strong> {{full_name}}</p>\n</div>\n<p>Please present this digital pass or printed copy at the reception check-in desk.</p>\n<p><a href=\"{{registration_link}}\" style=\"background:#C5A46D;color:#101010;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;\">View Digital Pass</a></p>\n<p>Best regards,<br>7 Horse Ventures Curation Committee</p>",
+      "variables": [
+        "first_name",
+        "full_name",
+        "event_name",
+        "event_date",
+        "event_time",
+        "event_location",
+        "ticket_reference",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-02",
+      "name": "Event Reminder (Upcoming Cohort)",
+      "category": "Event Reminders",
+      "subject": "Reminder: {{event_name}} is taking place on {{event_date}}",
+      "body": "<h2>7 HORSE VENTURES</h2>\n<p>Hi {{first_name}},</p>\n<p>This is a quick reminder that <strong>{{event_name}}</strong> will commence on <strong>{{event_date}} at {{event_time}}</strong>.</p>\n<p><strong>Location:</strong> {{event_location}}</p>\n<p><strong>Your Pass ID:</strong> {{ticket_reference}}</p>\n<p>We recommend arriving 15 minutes early for curated peer introductions and welcome high tea.</p>\n<p><a href=\"{{registration_link}}\" style=\"background:#C5A46D;color:#101010;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;\">Access Pass & Directions</a></p>\n<p>See you there,<br>7 Horse Ventures Team</p>",
+      "variables": [
+        "first_name",
+        "full_name",
+        "event_name",
+        "event_date",
+        "event_time",
+        "event_location",
+        "ticket_reference",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-03",
+      "name": "Post-Event Thank You & Resources",
+      "category": "Post-Event",
+      "subject": "Thank you for joining {{event_name}} • Key Takeaways & Deck",
+      "body": "<h2>7 HORSE VENTURES</h2>\n<p>Dear {{first_name}},</p>\n<p>Thank you for participating in <strong>{{event_name}}</strong>. Your perspectives and active engagement contributed significantly to the high signal of the cohort.</p>\n<p>We have compiled session highlights, executive presentation decks, and peer connection links in your portal:</p>\n<p><a href=\"{{registration_link}}\" style=\"background:#101010;color:#D8C39A;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;\">Download Session Resources</a></p>\n<p>We would love your brief feedback to help us continually elevate future editions.</p>\n<p>Warm regards,<br>7 Horse Ventures Community Leadership</p>",
+      "variables": [
+        "first_name",
+        "full_name",
+        "event_name",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-04",
+      "name": "No-Show Friendly Follow-up",
+      "category": "Post-Event",
+      "subject": "We missed you at {{event_name}} — Here is what you missed",
+      "body": "<h2>7 HORSE VENTURES</h2>\n<p>Dear {{first_name}},</p>\n<p>We missed having you at <strong>{{event_name}}</strong> yesterday. We understand urgent founder commitments often take precedence.</p>\n<p>To keep you in the loop, we've made the executive summary and speaker resource workbook available for you:</p>\n<p><a href=\"{{registration_link}}\" style=\"background:#C5A46D;color:#101010;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;\">Review Event Takeaways</a></p>\n<p>We look forward to welcoming you at an upcoming edition soon.</p>\n<p>Warmly,<br>7 Horse Ventures</p>",
+      "variables": [
+        "first_name",
+        "full_name",
+        "event_name",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-05",
+      "name": "Academy Registration Confirmation",
+      "category": "Academy",
+      "subject": "Confirmed: 7H Academy Masterclass Access for {{first_name}}",
+      "body": "<h2>7 HORSE ACADEMY</h2>\n<p>Welcome {{first_name}},</p>\n<p>Your enrollment in <strong>{{event_name}}</strong> is confirmed. You now have access to the curriculum syllabus, reading materials, and live stream link.</p>\n<p><a href=\"{{registration_link}}\" style=\"background:#C5A46D;color:#101010;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;\">Open Academy Portal</a></p>\n<p>7 Horse Ventures Academy Faculty</p>",
+      "variables": [
+        "first_name",
+        "full_name",
+        "event_name",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-06",
+      "name": "Academy Session 24h Reminder",
+      "category": "Academy",
+      "subject": "Starting Tomorrow: 7H Academy Masterclass with Faculty",
+      "body": "<h2>7 HORSE ACADEMY</h2>\n<p>Hi {{first_name}},</p>\n<p>Your enrolled session <strong>{{event_name}}</strong> begins in 24 hours.</p>\n<p>Please review pre-session case studies and submit your questions for the speaker beforehand.</p>\n<p><a href=\"{{registration_link}}\" style=\"background:#101010;color:#D8C39A;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;\">Access Webinar Link</a></p>",
+      "variables": [
+        "first_name",
+        "event_name",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-07",
+      "name": "Ecosystem Monthly Newsletter",
+      "category": "Newsletter",
+      "subject": "7H Ventures Dispatch: Founder Signals & Capital Trends",
+      "body": "<h2>7 HORSE VENTURES DISPATCH</h2>\n<p>Hello {{first_name}},</p>\n<p>Here are this month's curated investment insights, builder teardowns, and upcoming networking opportunities across Delhi NCR and India's venture landscape.</p>\n<p>Read full insights on our portal.</p>\n<p><a href=\"{{registration_link}}\">Unsubscribe from ecosystem dispatches</a></p>",
+      "variables": [
+        "first_name",
+        "registration_link"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-08",
+      "name": "WhatsApp Community Exclusive Invitation",
+      "category": "Community",
+      "subject": "Exclusive Invitation: Join the 7 Horse Ventures WhatsApp Circle",
+      "body": "<h2>7 HORSE VENTURES</h2>\n<p>Hi {{first_name}},</p>\n<p>You are invited to join our private WhatsApp founder & investor community to receive real-time notices on upcoming roundtables, private pitch forums, and peer collaborations.</p>\n<p><a href=\"https://chat.whatsapp.com/IzTObDPm8pw80Hw811RJvC?s=cl&p=a&iam=2\" style=\"background:#25D366;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;\">Join Official WhatsApp Group</a></p>",
+      "variables": [
+        "first_name"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-09",
+      "name": "Partnership Alliance Introduction",
+      "category": "Partnerships",
+      "subject": "Strategic Partnership with 7 Horse Ventures Ecosystem",
+      "body": "<h2>7 HORSE VENTURES ALLIANCES</h2>\n<p>Dear {{first_name}},</p>\n<p>Following our initial conversation, we are pleased to share our partnership alignment framework and strategic opportunities for {{event_name}}.</p>\n<p>Best regards,<br>Strategic Partnerships Team</p>",
+      "variables": [
+        "first_name",
+        "event_name"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-10",
+      "name": "General Ecosystem Announcement",
+      "category": "General",
+      "subject": "Notice: Important Ecosystem Update from 7 Horse Ventures",
+      "body": "<h2>7 HORSE VENTURES</h2>\n<p>Dear {{first_name}},</p>\n<p>We are announcing an important enhancement to the 7 Horse Ventures ecosystem infrastructure.</p>\n<p>Warm regards,<br>7 Horse Ventures Management</p>",
+      "variables": [
+        "first_name"
+      ],
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    }
+  ],
+  "email_automations": [
+    {
+      "id": "auto-01",
+      "name": "Event Attendee Journey & Reminders",
+      "description": "Automated booking confirmation, scheduled reminders, post-event gratitude, and no-show follow-ups.",
+      "trigger": "EVENT_REGISTRATION",
+      "status": "active",
+      "steps": [
+        {
+          "id": "step-1",
+          "type": "email",
+          "delay": "immediate",
+          "templateId": "tpl-01",
+          "title": "Instant Booking Confirmation Pass"
+        },
+        {
+          "id": "step-2",
+          "type": "delay_until",
+          "delay": "3_days_before",
+          "templateId": "tpl-02",
+          "title": "3-Day Advance Event Reminder"
+        },
+        {
+          "id": "step-3",
+          "type": "delay_until",
+          "delay": "2_hours_before",
+          "templateId": "tpl-02",
+          "title": "Final Gate Check-in Reminder"
+        },
+        {
+          "id": "step-4",
+          "type": "condition_branch",
+          "condition": "checked_in",
+          "attendedTemplateId": "tpl-03",
+          "noShowTemplateId": "tpl-04",
+          "title": "Post-Event Reconciliation (Attended vs No-Show)"
+        }
+      ],
+      "stats": {
+        "triggered": 94,
+        "delivered": 94,
+        "opened": 76,
+        "clicked": 48
+      },
+      "createdAt": "2026-03-01T08:00:00.000Z"
+    },
+    {
+      "id": "auto-02",
+      "name": "Academy Enrollment Sequence",
+      "description": "Masterclass registration confirmation, 24-hour syllabus alert, and slidedeck delivery.",
+      "trigger": "ACADEMY_REGISTRATION",
+      "status": "active",
+      "steps": [
+        {
+          "id": "step-1",
+          "type": "email",
+          "delay": "immediate",
+          "templateId": "tpl-05",
+          "title": "Masterclass Enrollment Confirmation"
+        },
+        {
+          "id": "step-2",
+          "type": "delay_until",
+          "delay": "1_day_before",
+          "templateId": "tpl-06",
+          "title": "24-Hour Webinar Access Alert"
+        }
+      ],
+      "stats": {
+        "triggered": 48,
+        "delivered": 48,
+        "opened": 39,
+        "clicked": 24
+      },
+      "createdAt": "2026-03-01T08:00:00.000Z"
+    },
+    {
+      "id": "auto-03",
+      "name": "Founder Directory Approval Onboarding",
+      "description": "Triggered when a founder application is approved, sending community WhatsApp invite.",
+      "trigger": "FOUNDER_APPROVED",
+      "status": "active",
+      "steps": [
+        {
+          "id": "step-1",
+          "type": "email",
+          "delay": "immediate",
+          "templateId": "tpl-08",
+          "title": "Welcome to 7H Founder Network & WhatsApp Circle"
+        }
+      ],
+      "stats": {
+        "triggered": 22,
+        "delivered": 22,
+        "opened": 20,
+        "clicked": 18
+      },
+      "createdAt": "2026-03-01T08:00:00.000Z"
+    }
+  ],
+  "email_segments": [
+    {
+      "id": "seg-01",
+      "name": "All Registered Event Delegates",
+      "type": "dynamic",
+      "category": "Events",
+      "sourceCollection": "registrations",
+      "criteria": "all_registrations",
+      "description": "Every attendee who has registered or booked a ticket for any 7H event.",
+      "estimatedCount": 84
+    },
+    {
+      "id": "seg-02",
+      "name": "Confirmed Paid Delegates (Cashfree)",
+      "type": "dynamic",
+      "category": "Events",
+      "sourceCollection": "registrations",
+      "criteria": "paid_only",
+      "description": "Attendees with verified Cashfree paid passes.",
+      "estimatedCount": 26
+    },
+    {
+      "id": "seg-03",
+      "name": "Past Attended Delegates",
+      "type": "dynamic",
+      "category": "Events",
+      "sourceCollection": "registrations",
+      "criteria": "attended_checked_in",
+      "description": "Reconciled attendees who checked in at past summits.",
+      "estimatedCount": 38
+    },
+    {
+      "id": "seg-04",
+      "name": "Event No-Shows (Follow-up Pool)",
+      "type": "dynamic",
+      "category": "Events",
+      "sourceCollection": "registrations",
+      "criteria": "no_show",
+      "description": "Registered delegates who did not attend and need re-engagement.",
+      "estimatedCount": 12
+    },
+    {
+      "id": "seg-05",
+      "name": "Vetted Tech Founders",
+      "type": "dynamic",
+      "category": "Founders",
+      "sourceCollection": "founders",
+      "criteria": "approved_founders",
+      "description": "Verified founders in the 7 Horse Ventures directory.",
+      "estimatedCount": 45
+    },
+    {
+      "id": "seg-06",
+      "name": "Academy Masterclass Participants",
+      "type": "dynamic",
+      "category": "Academy",
+      "sourceCollection": "academy_registrations",
+      "criteria": "all_academy",
+      "description": "Founders and operators enrolled in 7H Academy masterclasses.",
+      "estimatedCount": 65
+    },
+    {
+      "id": "seg-07",
+      "name": "Active Newsletter Subscribers",
+      "type": "dynamic",
+      "category": "Publishing",
+      "sourceCollection": "subscribers",
+      "criteria": "active_subscribers",
+      "description": "Subscribers opted in for monthly venture dispatches.",
+      "estimatedCount": 242
+    },
+    {
+      "id": "seg-08",
+      "name": "Corporate & VC Partnership Leads",
+      "type": "dynamic",
+      "category": "Partnerships",
+      "sourceCollection": "partnerships",
+      "criteria": "all_partners",
+      "description": "Enterprise sponsors, VC syndicates, and alliance contacts.",
+      "estimatedCount": 18
+    }
+  ],
+  "email_campaigns": [
+    {
+      "id": "camp-01",
+      "title": "Q2 Founder Connect Gurugram Announcement",
+      "segmentId": "seg-05",
+      "segmentName": "Vetted Tech Founders",
+      "templateId": "tpl-02",
+      "subject": "Exclusive Invite: 7H Founder Connect — Founders & Builders Roundtable",
+      "status": "sent",
+      "scheduledAt": "2026-03-01T10:00:00.000Z",
+      "sentAt": "2026-03-01T10:05:00.000Z",
+      "recipientCount": 45,
+      "stats": {
+        "sent": 45,
+        "delivered": 45,
+        "opened": 36,
+        "clicked": 24,
+        "bounced": 0,
+        "unsubscribed": 0
+      }
+    },
+    {
+      "id": "camp-02",
+      "title": "7H Academy Cap Table Masterclass Dispatch",
+      "segmentId": "seg-06",
+      "segmentName": "Academy Masterclass Participants",
+      "templateId": "tpl-05",
+      "subject": "Seats Open: Cap Table Architecture & Term Sheet Mechanics",
+      "status": "sent",
+      "scheduledAt": "2026-03-02T12:00:00.000Z",
+      "sentAt": "2026-03-02T12:02:00.000Z",
+      "recipientCount": 65,
+      "stats": {
+        "sent": 65,
+        "delivered": 64,
+        "opened": 48,
+        "clicked": 31,
+        "bounced": 1,
+        "unsubscribed": 0
+      }
+    }
+  ],
+  "email_logs": [
+    {
+      "id": "elog-01",
+      "recipientEmail": "rohit@logixtrack.in",
+      "recipientName": "Rohit Malhotra",
+      "subject": "Confirmed: Your Official Executive Pass for 7H Founder Connect",
+      "templateId": "tpl-01",
+      "workflowId": "auto-01",
+      "status": "DELIVERED",
+      "providerResponse": "250 OK (SMTP TLS Delivered)",
+      "sentAt": "2026-03-01T12:30:15.000Z"
+    },
+    {
+      "id": "elog-02",
+      "recipientEmail": "aditya@finscale.io",
+      "recipientName": "Aditya Khurana",
+      "subject": "Confirmed: 7H Academy Masterclass Access for Aditya",
+      "templateId": "tpl-05",
+      "workflowId": "auto-02",
+      "status": "DELIVERED",
+      "providerResponse": "250 OK (SMTP TLS Delivered)",
+      "sentAt": "2026-03-02T10:30:10.000Z"
+    }
+  ],
+  "email_unsubscribes": []
 }

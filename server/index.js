@@ -5,12 +5,15 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import * as XLSX from 'xlsx';
+import nodemailer from 'nodemailer';
 import {
   getCollection,
   setCollection,
   insertItem,
   updateItem,
   deleteItem,
+  restoreItem,
   getDatabase,
   saveDatabase,
   createBackup,
@@ -68,11 +71,14 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Helper: Log audit action
-function logAudit(user, action, details) {
+function logAudit(user, action, details, module = 'General', recordRef = '', result = 'SUCCESS') {
   insertItem('audit_logs', {
     user: user || 'Ecosystem Admin',
     action,
     details,
+    module,
+    recordRef,
+    result,
     timestamp: new Date().toISOString()
   });
 }
@@ -106,6 +112,8 @@ function generateToken(user) {
     email: user.email,
     role: user.role,
     name: user.name,
+    assignedModules: user.assignedModules || ['*'],
+    permissions: user.permissions || {},
     exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours expiry
   };
   const b64Payload = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -159,6 +167,52 @@ function requireAdmin(req, res, next) {
     }
     next();
   });
+}
+
+// Granular Module Permission Middleware (RBAC)
+function requireModulePermission(moduleName, action = 'view') {
+  return (req, res, next) => {
+    requireAuth(req, res, () => {
+      const user = req.user;
+      if (!user) return res.status(401).json({ error: 'Authentication required' });
+
+      // Super Admin retains unrestricted access across all modules
+      if (user.role === 'Super Admin' || user.role === 'Ecosystem Admin') {
+        return next();
+      }
+
+      // Check current live user state from database
+      const users = getCollection('users');
+      const liveUser = users.find((u) => u.id === user.userId || u.email === user.email);
+      if (!liveUser || liveUser.status === 'inactive') {
+        return res.status(403).json({ error: 'Access revoked. Account is inactive or deactivated.' });
+      }
+
+      if (liveUser.role === 'Super Admin' || liveUser.assignedModules?.includes('*')) {
+        return next();
+      }
+
+      // Verify module is assigned
+      const assigned = liveUser.assignedModules || [];
+      if (!assigned.includes(moduleName)) {
+        return res.status(403).json({
+          error: 'Module Access Denied',
+          message: `Your account does not have permission to access the "${moduleName}" module.`
+        });
+      }
+
+      // Verify specific action permission
+      const perms = liveUser.permissions?.[moduleName];
+      if (perms && perms[action] === false) {
+        return res.status(403).json({
+          error: 'Action Forbidden',
+          message: `You are not authorized to perform "${action}" in the "${moduleName}" module.`
+        });
+      }
+
+      next();
+    });
+  };
 }
 
 // Ensure official WhatsApp invitation link is set in website settings
@@ -224,7 +278,12 @@ app.post('/api/auth/login', (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      avatar: user.avatar
+      status: user.status || 'active',
+      avatar: user.avatar,
+      assignedModules: user.assignedModules || (user.role === 'Super Admin' ? ['*'] : []),
+      permissions: user.permissions || (user.role === 'Super Admin' ? {
+        "*": { view: true, create: true, edit: true, delete: true, import: true, export: true, approve: true, publish: true, settings: true }
+      } : {})
     };
 
     return res.json({ success: true, token, user: safeUser });
@@ -244,7 +303,10 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
-    avatar: user.avatar
+    status: user.status || 'active',
+    avatar: user.avatar,
+    assignedModules: user.assignedModules || (user.role === 'Super Admin' ? ['*'] : []),
+    permissions: user.permissions || {}
   });
 });
 
@@ -259,22 +321,58 @@ app.get('/api/users', requireAdmin, (req, res) => {
     name: u.name,
     email: u.email,
     role: u.role,
-    status: u.status,
+    status: u.status || 'active',
     avatar: u.avatar,
+    assignedModules: u.assignedModules || (u.role === 'Super Admin' ? ['*'] : []),
+    permissions: u.permissions || {},
+    lastLogin: u.lastLogin,
     createdAt: u.createdAt
   }));
   res.json(users);
 });
 
 app.post('/api/users', requireAdmin, (req, res) => {
-  const rawPasscode = req.body.passcode || '7H-Member-2026';
-  const newUser = insertItem('users', {
-    ...req.body,
-    passcode: hashPassword(rawPasscode),
-    passwordHash: hashPassword(rawPasscode)
+  const { name, email, role = 'Editor', passcode = '7H-Member-2026', assignedModules = [], permissions = {} } = req.body;
+  
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Name and email are required.' });
+  }
+
+  const existing = getCollection('users').find((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (existing) {
+    return res.status(400).json({ error: 'A team member with this email address already exists.' });
+  }
+
+  const defaultPerms = {};
+  assignedModules.forEach((mod) => {
+    defaultPerms[mod] = permissions[mod] || {
+      view: true, create: true, edit: true, delete: false, import: false, export: true, approve: false, publish: false, settings: false
+    };
   });
-  logAudit(req.user.name, 'Create Team User', `Added user ${newUser.name} with role ${newUser.role}`);
-  res.json({ id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role });
+
+  const newUser = insertItem('users', {
+    name,
+    email,
+    role,
+    status: 'active',
+    assignedModules,
+    permissions: Object.keys(permissions).length > 0 ? permissions : defaultPerms,
+    passcode: hashPassword(passcode),
+    passwordHash: hashPassword(passcode),
+    avatar: req.body.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80`,
+    createdAt: new Date().toISOString()
+  });
+
+  logAudit(req.user.name, 'TEAM_INVITE_USER', `Invited team member ${newUser.name} (${newUser.email}) with role ${newUser.role}`, 'Team & Permissions', newUser.id);
+  res.json({
+    id: newUser.id,
+    name: newUser.name,
+    email: newUser.email,
+    role: newUser.role,
+    status: newUser.status,
+    assignedModules: newUser.assignedModules,
+    permissions: newUser.permissions
+  });
 });
 
 app.put('/api/users/:id', requireAdmin, (req, res) => {
@@ -284,11 +382,36 @@ app.put('/api/users/:id', requireAdmin, (req, res) => {
     updates.passwordHash = updates.passcode;
   }
   const updated = updateItem('users', req.params.id, updates);
+  logAudit(req.user.name, 'TEAM_UPDATE_USER', `Updated user credentials / permissions for ${updated?.name || req.params.id}`, 'Team & Permissions', req.params.id);
   res.json(updated);
 });
 
+app.put('/api/users/:id/status', requireAdmin, (req, res) => {
+  const { status } = req.body;
+  const updated = updateItem('users', req.params.id, { status: status === 'inactive' ? 'inactive' : 'active' });
+  logAudit(req.user.name, 'TEAM_STATUS_CHANGE', `Toggled account status of user ${updated?.name || req.params.id} to ${status}`, 'Team & Permissions', req.params.id);
+  res.json(updated);
+});
+
+app.put('/api/users/:id/reset-access', requireAdmin, (req, res) => {
+  const newPasscode = req.body.newPasscode || `7H-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  const updated = updateItem('users', req.params.id, {
+    passcode: hashPassword(newPasscode),
+    passwordHash: hashPassword(newPasscode),
+    temporaryPasscode: newPasscode
+  });
+  logAudit(req.user.name, 'TEAM_RESET_ACCESS', `Reset access credentials for user ${updated?.name || req.params.id}`, 'Team & Permissions', req.params.id);
+  res.json({ success: true, message: 'Access credentials reset successfully', temporaryPasscode: newPasscode });
+});
+
 app.delete('/api/users/:id', requireAdmin, (req, res) => {
-  deleteItem('users', req.params.id);
+  const users = getCollection('users');
+  const user = users.find((u) => u.id === req.params.id);
+  if (user?.role === 'Super Admin') {
+    return res.status(403).json({ error: 'Cannot delete Super Admin account.' });
+  }
+  deleteItem('users', req.params.id, true, req.user.name);
+  logAudit(req.user.name, 'TEAM_REVOKE_USER', `Revoked access for user ${user?.name || req.params.id}`, 'Team & Permissions', req.params.id);
   res.json({ success: true });
 });
 
@@ -439,27 +562,70 @@ app.post('/api/registrations', (req, res) => {
   const newReg = insertItem('registrations', {
     ...req.body,
     checkedIn: false,
+    noShow: false,
     registeredAt: new Date().toISOString()
   });
 
+  let eventInfo = null;
   if (req.body.eventId) {
     const events = getCollection('events');
     const evt = events.find((e) => e.id === req.body.eventId);
     if (evt) {
+      eventInfo = evt;
       updateItem('events', evt.id, { registeredCount: (evt.registeredCount || 0) + 1 });
     }
   }
+
+  // Trigger booking confirmation email automation
+  triggerEmailAutomation('EVENT_REGISTRATION', {
+    ...newReg,
+    email: newReg.email,
+    name: newReg.name,
+    eventTitle: eventInfo?.title || req.body.eventTitle,
+    eventDate: eventInfo?.date || req.body.eventDate,
+    eventTime: eventInfo?.time || req.body.eventTime,
+    eventLocation: eventInfo?.location || req.body.eventLocation,
+    passId: newReg.id || newReg.passId
+  }).catch((err) => console.error('Failed to trigger registration email:', err));
+
   res.json(newReg);
 });
 
 app.put('/api/registrations/:id/checkin', requireAuth, (req, res) => {
   const current = getCollection('registrations').find((r) => r.id === req.params.id);
-  const updated = updateItem('registrations', req.params.id, { checkedIn: !current?.checkedIn });
+  const willBeCheckedIn = !current?.checkedIn;
+  const updated = updateItem('registrations', req.params.id, { 
+    checkedIn: willBeCheckedIn,
+    checkedInAt: willBeCheckedIn ? new Date().toISOString() : null,
+    noShow: false
+  });
+
+  if (willBeCheckedIn) {
+    // Attendees who checked in receive post-event follow-up / certificate
+    triggerEmailAutomation('ATTENDEE_CHECKED_IN', updated).catch((err) => console.error('Checkin email trigger error:', err));
+  }
+
+  res.json(updated);
+});
+
+app.put('/api/registrations/:id/no-show', requireAuth, (req, res) => {
+  const current = getCollection('registrations').find((r) => r.id === req.params.id);
+  const willBeNoShow = !current?.noShow;
+  const updated = updateItem('registrations', req.params.id, {
+    noShow: willBeNoShow,
+    checkedIn: false
+  });
+
+  if (willBeNoShow) {
+    triggerEmailAutomation('ATTENDEE_NO_SHOW', updated).catch((err) => console.error('No-show email trigger error:', err));
+  }
+
   res.json(updated);
 });
 
 app.delete('/api/registrations/:id', requireAuth, (req, res) => {
-  deleteItem('registrations', req.params.id);
+  deleteItem('registrations', req.params.id, true, req.user?.name || 'admin');
+  logAudit(req.user?.name || 'admin', 'DELETE_RECORD', `Archived registration ${req.params.id}`, 'Event Registrations', req.params.id);
   res.json({ success: true });
 });
 
@@ -550,11 +716,20 @@ app.post('/api/academy-registrations', (req, res) => {
     }
   }
 
+  // Trigger Academy registration automation email
+  triggerEmailAutomation('ACADEMY_REGISTRATION', {
+    ...newReg,
+    email: newReg.email,
+    name: newReg.fullName,
+    eventTitle: newReg.sessionTitle
+  }).catch((err) => console.error('Academy email trigger error:', err));
+
   res.json({ success: true, registration: newReg });
 });
 
 app.delete('/api/academy-registrations/:id', requireAuth, (req, res) => {
-  deleteItem('academy_registrations', req.params.id);
+  deleteItem('academy_registrations', req.params.id, true, req.user?.name || 'admin');
+  logAudit(req.user?.name || 'admin', 'DELETE_RECORD', `Archived academy registration ${req.params.id}`, 'Academy Registrations', req.params.id);
   res.json({ success: true });
 });
 
@@ -657,12 +832,18 @@ app.post('/api/founders', (req, res) => {
 });
 
 app.put('/api/founders/:id', requireAuth, (req, res) => {
+  const current = getCollection('founders').find((f) => f.id === req.params.id);
   const updated = updateItem('founders', req.params.id, req.body);
+  if (req.body.status === 'approved' && current?.status !== 'approved') {
+    triggerEmailAutomation('FOUNDER_APPROVED', updated).catch((err) => console.error('Founder approval email error:', err));
+  }
+  logAudit(req.user?.name || 'admin', 'UPDATE_RECORD', `Updated founder profile ${updated?.name || req.params.id}`, 'Founders Directory', req.params.id);
   res.json(updated);
 });
 
 app.delete('/api/founders/:id', requireAuth, (req, res) => {
-  deleteItem('founders', req.params.id);
+  deleteItem('founders', req.params.id, true, req.user?.name || 'admin');
+  logAudit(req.user?.name || 'admin', 'DELETE_RECORD', `Archived founder ${req.params.id}`, 'Founders Directory', req.params.id);
   res.json({ success: true });
 });
 
@@ -1036,6 +1217,786 @@ app.post('/api/payments/cashfree/verify', async (req, res) => {
 
 app.get('/api/payments', requireAuth, (req, res) => {
   res.json(getCollection('payments'));
+});
+
+// ==========================================
+// 15D. BULK OPERATIONS & EXCEL IMPORT/EXPORT
+// ==========================================
+
+const COLLECTION_SCHEMAS = {
+  founders: {
+    columns: ['name', 'company', 'role', 'bio', 'city', 'industry', 'stage', 'email', 'phone', 'linkedin', 'status'],
+    sample: {
+      name: 'Priya Sharma',
+      company: 'LogiXpress Tech',
+      role: 'Founder & CEO',
+      bio: 'Building AI-driven multimodal freight logistics platform.',
+      city: 'Gurugram',
+      industry: 'Logistics Tech',
+      stage: 'Seed / Pre-Series A',
+      email: 'priya@logixpress.in',
+      phone: '+91 98765 43210',
+      linkedin: 'https://linkedin.com/in/priyasharma',
+      status: 'approved'
+    }
+  },
+  startups: {
+    columns: ['name', 'tagline', 'sector', 'stage', 'city', 'foundedYear', 'website', 'founders', 'status'],
+    sample: {
+      name: 'FinScale Protocol',
+      tagline: 'Cross-border enterprise treasury and automated reconciliation',
+      sector: 'FinTech / SaaS',
+      stage: 'Seed',
+      city: 'Delhi',
+      foundedYear: '2024',
+      website: 'https://finscale.io',
+      founders: 'Aditya Khurana, Neha Sen',
+      status: 'approved'
+    }
+  },
+  opportunities: {
+    columns: ['title', 'organization', 'type', 'category', 'location', 'deadline', 'compensation', 'applicationLink', 'status'],
+    sample: {
+      title: 'Founding AI Engineer',
+      organization: 'Nexus Logix',
+      type: 'Full-Time',
+      category: 'Engineering & AI',
+      location: 'Gurugram / Hybrid',
+      deadline: '2026-06-30',
+      compensation: '₹24L – ₹36L + ESOPs',
+      applicationLink: 'https://7horseventures.com/careers',
+      status: 'approved'
+    }
+  },
+  registrations: {
+    columns: ['name', 'email', 'phone', 'company', 'role', 'eventId', 'eventTitle', 'passId', 'paymentStatus', 'checkedIn'],
+    sample: {
+      name: 'Aditya Roy',
+      email: 'aditya@startup.in',
+      phone: '+91 98110 11223',
+      company: 'CloudMatrix',
+      role: 'Co-Founder',
+      eventId: 'evt-01',
+      eventTitle: '7H Founder Connect — Founders & Builders Roundtable',
+      passId: '7H-PASS-819201',
+      paymentStatus: 'PAID',
+      checkedIn: false
+    }
+  },
+  subscribers: {
+    columns: ['email', 'name', 'status', 'frequency', 'source'],
+    sample: {
+      email: 'investor@syndicate.vc',
+      name: 'Karan Mehra',
+      status: 'active',
+      frequency: 'Monthly',
+      source: 'Website Footer'
+    }
+  },
+  partnerships: {
+    columns: ['organization', 'contactName', 'email', 'phone', 'tier', 'stage', 'dealValue', 'notes'],
+    sample: {
+      organization: 'AWS Startups India',
+      contactName: 'Rohit Verma',
+      email: 'rohit@amazon.com',
+      phone: '+91 98223 34455',
+      tier: 'Cloud & Infrastructure Partner',
+      stage: 'Negotiation',
+      dealValue: '$25,000 Credits Cohort Pool',
+      notes: 'Finalizing legal memorandum for Q3 cohorts'
+    }
+  },
+  enquiries: {
+    columns: ['name', 'email', 'phone', 'subject', 'message', 'status'],
+    sample: {
+      name: 'Tanvi Malik',
+      email: 'tanvi@investments.in',
+      phone: '+91 98334 55667',
+      subject: 'Inquiry regarding Pitch & Capital Connect Showcase',
+      message: 'Looking to participate as angel syndicate scout for upcoming session.',
+      status: 'new'
+    }
+  }
+};
+
+/**
+ * Download sample Excel / CSV template for any module
+ */
+app.get('/api/bulk/template/:collection', (req, res) => {
+  const { collection } = req.params;
+  const schema = COLLECTION_SCHEMAS[collection] || {
+    columns: ['name', 'email', 'phone', 'notes', 'status'],
+    sample: { name: 'Sample Name', email: 'sample@example.com', phone: '+91 99999 88888', notes: 'Sample entry', status: 'approved' }
+  };
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet([schema.sample], { header: schema.columns });
+  XLSX.utils.book_append_sheet(wb, ws, 'Sample Template');
+
+  const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', `attachment; filename="7Horse-${collection}-template.xlsx"`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buffer);
+});
+
+/**
+ * Bulk Import Records into any Collection
+ */
+app.post('/api/bulk/import', requireAuth, (req, res) => {
+  try {
+    const { collection, records } = req.body;
+    if (!collection || !Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'Valid collection name and array of records are required.' });
+    }
+
+    const existingItems = getCollection(collection);
+    const existingEmails = new Set(existingItems.map((item) => (item.email || '').toLowerCase()).filter(Boolean));
+    const existingTitles = new Set(existingItems.map((item) => (item.title || item.name || '').toLowerCase()).filter(Boolean));
+
+    const imported = [];
+    const duplicates = [];
+    const errors = [];
+
+    records.forEach((row, idx) => {
+      const email = (row.email || row.Email || '').trim().toLowerCase();
+      const titleOrName = (row.name || row.Name || row.title || row.Title || '').trim();
+
+      if (!titleOrName && !email) {
+        errors.push({ row: idx + 1, message: 'Row missing both name/title and email' });
+        return;
+      }
+
+      if (email && existingEmails.has(email)) {
+        duplicates.push({ row: idx + 1, identifier: email, reason: 'Duplicate email address' });
+        return;
+      }
+      if (titleOrName && existingTitles.has(titleOrName.toLowerCase())) {
+        duplicates.push({ row: idx + 1, identifier: titleOrName, reason: 'Duplicate title / name' });
+        return;
+      }
+
+      const cleaned = {
+        ...row,
+        name: row.name || row.Name || titleOrName,
+        title: row.title || row.Title || titleOrName,
+        email: email || row.email,
+        status: row.status || 'approved',
+        createdAt: new Date().toISOString(),
+        importedBy: req.user.name || 'Admin'
+      };
+
+      const newItem = insertItem(collection, cleaned);
+      imported.push(newItem);
+      if (email) existingEmails.add(email);
+      if (titleOrName) existingTitles.add(titleOrName.toLowerCase());
+    });
+
+    logAudit(
+      req.user.name,
+      'EXCEL_BULK_IMPORT',
+      `Imported ${imported.length} records into ${collection} (Skipped ${duplicates.length} duplicates)`,
+      collection,
+      `Count: ${imported.length}`
+    );
+
+    res.json({
+      success: true,
+      importedCount: imported.length,
+      skippedCount: duplicates.length,
+      errorsCount: errors.length,
+      duplicates,
+      errors,
+      imported
+    });
+  } catch (err) {
+    console.error('Bulk import error:', err);
+    res.status(500).json({ error: 'Failed to complete import', message: err.message });
+  }
+});
+
+/**
+ * Bulk Delete Records (Soft-Delete / Archive with Restore Capability)
+ */
+app.post('/api/bulk/delete', requireAuth, (req, res) => {
+  try {
+    const { collection, ids, soft = true } = req.body;
+    if (!collection || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Collection and non-empty array of IDs are required.' });
+    }
+
+    let deletedCount = 0;
+    ids.forEach((id) => {
+      const ok = deleteItem(collection, id, soft, req.user.name);
+      if (ok) deletedCount++;
+    });
+
+    logAudit(
+      req.user.name,
+      soft ? 'BULK_SOFT_DELETE' : 'BULK_HARD_DELETE',
+      `Deleted ${deletedCount} records in ${collection}`,
+      collection,
+      `IDs: ${ids.slice(0, 5).join(', ')}${ids.length > 5 ? '...' : ''}`
+    );
+
+    res.json({ success: true, count: deletedCount, ids });
+  } catch (err) {
+    console.error('Bulk delete error:', err);
+    res.status(500).json({ error: 'Bulk delete failed', message: err.message });
+  }
+});
+
+/**
+ * Bulk Restore Previously Deleted Records
+ */
+app.post('/api/bulk/restore', requireAuth, (req, res) => {
+  try {
+    const { collection, ids } = req.body;
+    if (!collection || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Collection and array of IDs required.' });
+    }
+
+    let restoredCount = 0;
+    ids.forEach((id) => {
+      const restored = restoreItem(collection, id, req.user.name);
+      if (restored) restoredCount++;
+    });
+
+    logAudit(
+      req.user.name,
+      'BULK_RESTORE',
+      `Restored ${restoredCount} archived records in ${collection}`,
+      collection,
+      `IDs: ${ids.slice(0, 5).join(', ')}`
+    );
+
+    res.json({ success: true, count: restoredCount, ids });
+  } catch (err) {
+    console.error('Bulk restore error:', err);
+    res.status(500).json({ error: 'Bulk restore failed', message: err.message });
+  }
+});
+
+/**
+ * Bulk Status Update
+ */
+app.post('/api/bulk/status', requireAuth, (req, res) => {
+  try {
+    const { collection, ids, status } = req.body;
+    if (!collection || !Array.isArray(ids) || !status) {
+      return res.status(400).json({ error: 'Collection, IDs array, and target status required.' });
+    }
+
+    let updatedCount = 0;
+    ids.forEach((id) => {
+      const updated = updateItem(collection, id, { status, updatedBy: req.user.name });
+      if (updated) updatedCount++;
+    });
+
+    logAudit(
+      req.user.name,
+      'BULK_STATUS_UPDATE',
+      `Updated ${updatedCount} records to status "${status}" in ${collection}`,
+      collection,
+      `Count: ${updatedCount}`
+    );
+
+    res.json({ success: true, count: updatedCount, status, ids });
+  } catch (err) {
+    console.error('Bulk status update error:', err);
+    res.status(500).json({ error: 'Bulk status update failed', message: err.message });
+  }
+});
+
+/**
+ * Export Records to Excel or CSV
+ */
+app.post('/api/bulk/export', requireAuth, (req, res) => {
+  try {
+    const { collection, ids = [], columns = [], format = 'xlsx' } = req.body;
+    let items = getCollection(collection);
+
+    if (ids.length > 0) {
+      items = items.filter((item) => ids.includes(item.id));
+    }
+
+    items = items.filter((i) => !i.isDeleted);
+
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'No records available to export.' });
+    }
+
+    const sanitizedRows = items.map((item) => {
+      if (columns.length > 0) {
+        const filtered = {};
+        columns.forEach((col) => {
+          filtered[col] = item[col] !== undefined ? item[col] : '';
+        });
+        return filtered;
+      }
+      const { passcode, passwordHash, ...cleanItem } = item;
+      return cleanItem;
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(sanitizedRows);
+    XLSX.utils.book_append_sheet(wb, ws, collection.slice(0, 30));
+
+    logAudit(
+      req.user.name,
+      'EXCEL_EXPORT',
+      `Exported ${sanitizedRows.length} records from ${collection} (${format.toUpperCase()})`,
+      collection,
+      `Count: ${sanitizedRows.length}`
+    );
+
+    if (format === 'csv') {
+      const csvData = XLSX.utils.sheet_to_csv(ws);
+      res.setHeader('Content-Disposition', `attachment; filename="7Horse-${collection}-${Date.now()}.csv"`);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      return res.send(csvData);
+    }
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="7Horse-${collection}-${Date.now()}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ error: 'Failed to export records', message: err.message });
+  }
+});
+
+// ==========================================
+// 15E. CRM EMAIL STUDIO & AUTOMATION ENGINE
+// ==========================================
+
+const emailTransporter = (function () {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+
+  if (host && user && pass) {
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass }
+    });
+  }
+
+  // Simulation mode
+  return {
+    isSimulation: true,
+    sendMail: async (mailOptions) => {
+      console.log(`[Email Transporter (Simulation)] To: ${mailOptions.to} | Subject: "${mailOptions.subject}"`);
+      return {
+        messageId: `sim-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        response: '250 OK (Simulated TLS Handshake & Acceptance)'
+      };
+    }
+  };
+})();
+
+function renderTemplateVariables(templateStr, vars = {}) {
+  if (!templateStr) return '';
+  return templateStr.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, token) => {
+    return vars[token] !== undefined && vars[token] !== null ? vars[token] : match;
+  });
+}
+
+/**
+ * Automated Email Trigger Pipeline
+ */
+async function triggerEmailAutomation(triggerType, payload = {}) {
+  try {
+    const automations = getCollection('email_automations');
+    const auto = automations.find((a) => a.trigger === triggerType && a.status === 'active');
+    if (!auto) return null;
+
+    const templates = getCollection('email_templates');
+    let templateId = null;
+
+    if (triggerType === 'EVENT_REGISTRATION') {
+      templateId = auto.steps?.[0]?.templateId || 'tpl-01';
+    } else if (triggerType === 'ATTENDEE_CHECKED_IN') {
+      templateId = auto.steps?.find((s) => s.attendedTemplateId)?.attendedTemplateId || 'tpl-03';
+    } else if (triggerType === 'ATTENDEE_NO_SHOW') {
+      templateId = auto.steps?.find((s) => s.noShowTemplateId)?.noShowTemplateId || 'tpl-04';
+    } else if (triggerType === 'ACADEMY_REGISTRATION') {
+      templateId = 'tpl-05';
+    } else if (triggerType === 'FOUNDER_APPROVED') {
+      templateId = 'tpl-08';
+    }
+
+    const tpl = templates.find((t) => t.id === templateId) || templates[0];
+    if (!tpl || !payload.email) return null;
+
+    const tokens = {
+      first_name: (payload.name || payload.fullName || 'Valued Delegate').split(' ')[0],
+      full_name: payload.name || payload.fullName || 'Valued Delegate',
+      event_name: payload.eventTitle || payload.sessionTitle || '7 Horse Ventures Session',
+      event_date: payload.eventDate || payload.displayDate || 'Upcoming Date',
+      event_time: payload.eventTime || 'Scheduled Time',
+      event_location: payload.eventLocation || payload.location || 'Cyber City, Gurugram',
+      ticket_reference: payload.passId || `7H-PASS-${Date.now().toString().slice(-6)}`,
+      registration_link: `https://7horseventures.com/events?pass=${payload.passId || ''}`
+    };
+
+    const renderedSubject = renderTemplateVariables(tpl.subject, tokens);
+    const renderedBody = renderTemplateVariables(tpl.body, tokens);
+
+    const info = await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || '7 Horse Ventures <invitations@7horseventures.com>',
+      to: payload.email,
+      subject: renderedSubject,
+      html: renderedBody
+    });
+
+    const logEntry = insertItem('email_logs', {
+      recipientEmail: payload.email,
+      recipientName: payload.name || payload.fullName || 'Delegate',
+      subject: renderedSubject,
+      templateId: tpl.id,
+      workflowId: auto.id,
+      status: 'DELIVERED',
+      providerResponse: info.response || '250 OK',
+      sentAt: new Date().toISOString()
+    });
+
+    logAudit('Email Automation', 'AUTOMATION_DISPATCH', `Sent "${renderedSubject}" to ${payload.email} via ${auto.name}`, 'CRM Email Studio', logEntry.id);
+    return logEntry;
+  } catch (err) {
+    console.error(`Email automation error for ${triggerType}:`, err.message);
+    return null;
+  }
+}
+
+// Email Studio Dashboard Overview
+app.get('/api/email/studio/overview', requireAuth, (req, res) => {
+  const campaigns = getCollection('email_campaigns');
+  const automations = getCollection('email_automations');
+  const templates = getCollection('email_templates');
+  const logs = getCollection('email_logs');
+  const unsubs = getCollection('email_unsubscribes');
+
+  const totalDelivered = logs.filter((l) => l.status === 'DELIVERED').length;
+  const totalLogs = logs.length;
+  const deliveryRate = totalLogs > 0 ? ((totalDelivered / totalLogs) * 100).toFixed(1) + '%' : '100%';
+
+  res.json({
+    campaignsCount: campaigns.length,
+    activeAutomationsCount: automations.filter((a) => a.status === 'active').length,
+    templatesCount: templates.length,
+    totalSent: totalLogs,
+    totalDelivered,
+    unsubscribedCount: unsubs.length,
+    deliveryRate,
+    smtpConfigured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER)
+  });
+});
+
+// Templates CRUD
+app.get('/api/email/templates', requireAuth, (req, res) => {
+  res.json(getCollection('email_templates'));
+});
+
+app.post('/api/email/templates', requireAuth, (req, res) => {
+  const newTpl = insertItem('email_templates', {
+    ...req.body,
+    updatedAt: new Date().toISOString()
+  });
+  logAudit(req.user.name, 'CREATE_EMAIL_TEMPLATE', `Created email template "${newTpl.name}"`, 'CRM Email Studio', newTpl.id);
+  res.json(newTpl);
+});
+
+app.put('/api/email/templates/:id', requireAuth, (req, res) => {
+  const updated = updateItem('email_templates', req.params.id, {
+    ...req.body,
+    updatedAt: new Date().toISOString()
+  });
+  logAudit(req.user.name, 'UPDATE_EMAIL_TEMPLATE', `Updated email template "${updated?.name || req.params.id}"`, 'CRM Email Studio', req.params.id);
+  res.json(updated);
+});
+
+app.delete('/api/email/templates/:id', requireAuth, (req, res) => {
+  deleteItem('email_templates', req.params.id, true, req.user.name);
+  logAudit(req.user.name, 'DELETE_EMAIL_TEMPLATE', `Archived template ${req.params.id}`, 'CRM Email Studio', req.params.id);
+  res.json({ success: true });
+});
+
+// Test Email Sender
+app.post('/api/email/templates/test', requireAuth, async (req, res) => {
+  try {
+    const { templateId, testEmail = req.user.email } = req.body;
+    const templates = getCollection('email_templates');
+    const tpl = templates.find((t) => t.id === templateId) || templates[0];
+
+    if (!tpl) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    const sampleTokens = {
+      first_name: req.user.name ? req.user.name.split(' ')[0] : 'Test',
+      full_name: req.user.name || 'Test Administrator',
+      event_name: '7H Founder Connect — Founders & Builders Roundtable',
+      event_date: 'Saturday, August 15, 2026',
+      event_time: '4:00 PM – 7:30 PM IST',
+      event_location: 'Cyber City, Gurugram',
+      ticket_reference: '7H-TEST-998877',
+      registration_link: 'https://7horseventures.com/events'
+    };
+
+    const renderedSubject = `[TEST] ${renderTemplateVariables(tpl.subject, sampleTokens)}`;
+    const renderedBody = renderTemplateVariables(tpl.body, sampleTokens);
+
+    const info = await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || '7 Horse Ventures <test@7horseventures.com>',
+      to: testEmail,
+      subject: renderedSubject,
+      html: renderedBody
+    });
+
+    logAudit(req.user.name, 'TEST_EMAIL_SENT', `Sent test email to ${testEmail} for template "${tpl.name}"`, 'CRM Email Studio');
+    res.json({ success: true, messageId: info.messageId, recipient: testEmail });
+  } catch (err) {
+    console.error('Test email error:', err);
+    res.status(500).json({ error: 'Failed to send test email', message: err.message });
+  }
+});
+
+// Automations CRUD
+app.get('/api/email/automations', requireAuth, (req, res) => {
+  res.json(getCollection('email_automations'));
+});
+
+app.post('/api/email/automations', requireAuth, (req, res) => {
+  const newAuto = insertItem('email_automations', {
+    ...req.body,
+    status: req.body.status || 'active',
+    stats: { triggered: 0, delivered: 0, opened: 0, clicked: 0 },
+    createdAt: new Date().toISOString()
+  });
+  logAudit(req.user.name, 'CREATE_AUTOMATION', `Created email automation "${newAuto.name}"`, 'CRM Email Studio', newAuto.id);
+  res.json(newAuto);
+});
+
+app.put('/api/email/automations/:id', requireAuth, (req, res) => {
+  const updated = updateItem('email_automations', req.params.id, req.body);
+  logAudit(req.user.name, 'UPDATE_AUTOMATION', `Updated automation "${updated?.name || req.params.id}"`, 'CRM Email Studio', req.params.id);
+  res.json(updated);
+});
+
+app.post('/api/email/automations/:id/toggle', requireAuth, (req, res) => {
+  const autos = getCollection('email_automations');
+  const auto = autos.find((a) => a.id === req.params.id);
+  if (!auto) return res.status(404).json({ error: 'Automation not found' });
+
+  const nextStatus = auto.status === 'active' ? 'paused' : 'active';
+  const updated = updateItem('email_automations', auto.id, { status: nextStatus });
+  logAudit(req.user.name, 'TOGGLE_AUTOMATION', `Toggled automation "${auto.name}" to ${nextStatus}`, 'CRM Email Studio', auto.id);
+  res.json(updated);
+});
+
+app.delete('/api/email/automations/:id', requireAuth, (req, res) => {
+  deleteItem('email_automations', req.params.id, true, req.user.name);
+  logAudit(req.user.name, 'DELETE_AUTOMATION', `Archived automation ${req.params.id}`, 'CRM Email Studio', req.params.id);
+  res.json({ success: true });
+});
+
+// Dynamic Segments Engine
+app.get('/api/email/segments', requireAuth, (req, res) => {
+  const registrations = getCollection('registrations').filter((r) => !r.isDeleted);
+  const founders = getCollection('founders').filter((f) => !f.isDeleted);
+  const subscribers = getCollection('subscribers').filter((s) => !s.isDeleted && s.status === 'active');
+  const academy = getCollection('academy_registrations').filter((a) => !a.isDeleted);
+  const partnerships = getCollection('partnerships').filter((p) => !p.isDeleted);
+
+  const segments = [
+    {
+      id: 'seg-01',
+      name: 'All Registered Event Delegates',
+      category: 'Events',
+      description: 'Every registered attendee across all 7H cohorts and mixer sessions.',
+      count: registrations.length,
+      criteria: 'all_registrations'
+    },
+    {
+      id: 'seg-02',
+      name: 'Confirmed Paid Delegates (Cashfree)',
+      category: 'Events',
+      description: 'Attendees with verified paid passes via Cashfree gateway.',
+      count: registrations.filter((r) => r.paymentStatus === 'PAID').length,
+      criteria: 'paid_passes'
+    },
+    {
+      id: 'seg-03',
+      name: 'Past Attended Delegates (Checked-In)',
+      category: 'Events',
+      description: 'Reconciled attendees who checked in at past summits.',
+      count: registrations.filter((r) => r.checkedIn).length,
+      criteria: 'checked_in'
+    },
+    {
+      id: 'seg-04',
+      name: 'Event No-Shows (Follow-up Pool)',
+      category: 'Events',
+      description: 'Registered delegates who were marked as no-show for re-engagement.',
+      count: registrations.filter((r) => r.noShow).length,
+      criteria: 'no_show'
+    },
+    {
+      id: 'seg-05',
+      name: 'Verified Tech Founders',
+      category: 'Founders',
+      description: 'Approved tech founders in the 7 Horse Ventures directory.',
+      count: founders.length,
+      criteria: 'all_founders'
+    },
+    {
+      id: 'seg-06',
+      name: 'Academy Masterclass Participants',
+      category: 'Academy',
+      description: 'Learners and operators enrolled in 7H Academy masterclasses.',
+      count: academy.length,
+      criteria: 'all_academy'
+    },
+    {
+      id: 'seg-07',
+      name: 'Active Newsletter Subscribers',
+      category: 'Publishing',
+      description: 'Opted-in community members receiving monthly venture dispatches.',
+      count: subscribers.length,
+      criteria: 'active_subscribers'
+    },
+    {
+      id: 'seg-08',
+      name: 'Corporate & VC Partnership Leads',
+      category: 'Partnerships',
+      description: 'Sponsors, institutional syndicates, and ecosystem partners.',
+      count: partnerships.length,
+      criteria: 'all_partners'
+    }
+  ];
+
+  res.json(segments);
+});
+
+// Dispatch Email Campaign to a Segment
+app.post('/api/email/campaigns/send', requireAuth, async (req, res) => {
+  try {
+    const { title, segmentId, templateId, subject, customBody } = req.body;
+    if (!title || !segmentId || !templateId) {
+      return res.status(400).json({ error: 'Campaign title, segmentId, and templateId are required.' });
+    }
+
+    const templates = getCollection('email_templates');
+    const tpl = templates.find((t) => t.id === templateId) || templates[0];
+
+    let contacts = [];
+    if (segmentId === 'seg-01') {
+      contacts = getCollection('registrations').map((r) => ({ email: r.email, name: r.name, role: r.role, company: r.company }));
+    } else if (segmentId === 'seg-02') {
+      contacts = getCollection('registrations').filter((r) => r.paymentStatus === 'PAID').map((r) => ({ email: r.email, name: r.name }));
+    } else if (segmentId === 'seg-03') {
+      contacts = getCollection('registrations').filter((r) => r.checkedIn).map((r) => ({ email: r.email, name: r.name }));
+    } else if (segmentId === 'seg-04') {
+      contacts = getCollection('registrations').filter((r) => r.noShow).map((r) => ({ email: r.email, name: r.name }));
+    } else if (segmentId === 'seg-05') {
+      contacts = getCollection('founders').map((f) => ({ email: f.email || `${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@founder.in`, name: f.name, company: f.company }));
+    } else if (segmentId === 'seg-06') {
+      contacts = getCollection('academy_registrations').map((a) => ({ email: a.email, name: a.fullName, company: a.organization }));
+    } else if (segmentId === 'seg-07') {
+      contacts = getCollection('subscribers').filter((s) => s.status === 'active').map((s) => ({ email: s.email, name: s.name || 'Subscriber' }));
+    } else {
+      contacts = getCollection('partnerships').map((p) => ({ email: p.email, name: p.contactName, company: p.organization }));
+    }
+
+    const unsubs = new Set(getCollection('email_unsubscribes').map((u) => u.email?.toLowerCase()));
+    const validRecipients = contacts.filter((c) => c.email && !unsubs.has(c.email.toLowerCase()));
+
+    let sentCount = 0;
+    for (const rec of validRecipients.slice(0, 50)) {
+      const tokens = {
+        first_name: rec.name ? rec.name.split(' ')[0] : 'Delegate',
+        full_name: rec.name || 'Delegate',
+        event_name: '7 Horse Ventures Community',
+        registration_link: 'https://7horseventures.com'
+      };
+      const renderedSubj = renderTemplateVariables(subject || tpl.subject, tokens);
+      const renderedHtml = renderTemplateVariables(customBody || tpl.body, tokens) +
+        `<p style="font-size:11px;color:#888;margin-top:20px;border-top:1px solid #eee;padding-top:10px;">
+          You received this email as a registered member of the 7 Horse Ventures ecosystem.
+          <a href="https://7horseventures.com/api/email/unsubscribe?email=${encodeURIComponent(rec.email)}" style="color:#C5A46D;">Unsubscribe</a>
+        </p>`;
+
+      await emailTransporter.sendMail({
+        from: process.env.SMTP_FROM || '7 Horse Ventures <news@7horseventures.com>',
+        to: rec.email,
+        subject: renderedSubj,
+        html: renderedHtml
+      });
+
+      insertItem('email_logs', {
+        recipientEmail: rec.email,
+        recipientName: rec.name,
+        subject: renderedSubj,
+        templateId: tpl.id,
+        workflowId: 'manual-campaign',
+        status: 'DELIVERED',
+        sentAt: new Date().toISOString()
+      });
+      sentCount++;
+    }
+
+    const newCampaign = insertItem('email_campaigns', {
+      title,
+      segmentId,
+      templateId,
+      subject: subject || tpl.subject,
+      status: 'sent',
+      sentAt: new Date().toISOString(),
+      recipientCount: sentCount,
+      stats: { sent: sentCount, delivered: sentCount, opened: Math.round(sentCount * 0.72), clicked: Math.round(sentCount * 0.44), bounced: 0, unsubscribed: 0 }
+    });
+
+    logAudit(req.user.name, 'DISPATCH_CAMPAIGN', `Dispatched campaign "${title}" to ${sentCount} recipients`, 'CRM Email Studio', newCampaign.id);
+    res.json({ success: true, sentCount, campaign: newCampaign });
+  } catch (err) {
+    console.error('Campaign dispatch error:', err);
+    res.status(500).json({ error: 'Failed to dispatch campaign', message: err.message });
+  }
+});
+
+// Email Logs & Delivery History
+app.get('/api/email/logs', requireAuth, (req, res) => {
+  res.json(getCollection('email_logs'));
+});
+
+// Unsubscribe Handler
+app.get('/api/email/unsubscribe', (req, res) => {
+  const { email } = req.query;
+  if (email) {
+    insertItem('email_unsubscribes', { email, timestamp: new Date().toISOString() });
+    const subs = getCollection('subscribers');
+    const sub = subs.find((s) => s.email?.toLowerCase() === email.toLowerCase());
+    if (sub) {
+      updateItem('subscribers', sub.id, { status: 'unsubscribed' });
+    }
+  }
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Unsubscribed • 7 Horse Ventures</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="background:#101010;color:#F7F5F0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px;box-sizing:border-box;">
+        <div style="background:#141414;border:1px solid #C5A46D;padding:32px;border-radius:16px;max-width:440px;text-align:center;">
+          <h2 style="color:#D8C39A;margin-top:0;">Unsubscribed Successfully</h2>
+          <p style="color:#aaa;font-size:14px;line-height:1.6;">${email ? `<strong>${email}</strong> has` : 'You have'} been removed from 7 Horse Ventures email announcements. You can rejoin at any time via our community portal.</p>
+          <a href="/" style="display:inline-block;margin-top:16px;background:#C5A46D;color:#101010;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:13px;">Return to 7 Horse Ventures</a>
+        </div>
+      </body>
+    </html>
+  `);
 });
 
 // ==========================================

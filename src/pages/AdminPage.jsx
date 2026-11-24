@@ -24,8 +24,9 @@ import AnalyticsAdminModule from '../components/admin/AnalyticsAdminModule';
 import TeamPermissionsModule from '../components/admin/TeamPermissionsModule';
 import IntegrationsModule from '../components/admin/IntegrationsModule';
 import WebsiteSettingsModule from '../components/admin/WebsiteSettingsModule';
+import EmailStudioModule from '../components/admin/EmailStudioModule';
 
-import { Lock, LogOut, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Lock, LogOut, ExternalLink, ShieldCheck, ShieldAlert } from 'lucide-react';
 
 export default function AdminPage() {
   const { currentUser, login, logout, navigate, showToast } = useApp();
@@ -119,9 +120,31 @@ export default function AdminPage() {
 
   // Active module router
   const renderActiveModule = () => {
+    const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.assignedModules?.includes('*') || !currentUser?.assignedModules;
+    const allowed = currentUser?.assignedModules || ['*'];
+    if (activeTab !== 'dashboard' && !isSuperAdmin && !allowed.includes(activeTab)) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 text-center bg-[#141414] border border-red-900/40 rounded-xl my-8">
+          <ShieldAlert className="w-12 h-12 text-red-400 mb-3" />
+          <h3 className="text-lg font-bold text-white font-serif">Access Restricted</h3>
+          <p className="text-xs text-stone-400 max-w-md mt-1 mb-4">
+            You do not have administrative authorization to access the <strong>{activeTab}</strong> module. Please contact your Super Administrator to request role access.
+          </p>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className="px-4 py-2 bg-[#C5A46D] text-[#101010] text-xs font-bold rounded-lg cursor-pointer"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return <DashboardModule setActiveTab={setActiveTab} />;
+      case 'crm_email_studio':
+        return <EmailStudioModule />;
       case 'visual_manager':
         return <VisualManagerModule />;
       case 'media_library':
