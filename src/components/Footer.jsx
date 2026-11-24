@@ -244,15 +244,6 @@ export default function Footer() {
             >
               Event Disclaimer
             </button>
-            <span className="text-stone-700">•</span>
-            <button
-              onClick={() => navigate('/admin')}
-              className="hover:text-[#C5A46D] transition-colors cursor-pointer inline-flex items-center gap-1 text-stone-600"
-              title="Ecosystem Administration"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Admin Console</span>
-            </button>
           </div>
         </div>
       </div>
