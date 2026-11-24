@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, API_BASE } from '../context/AppContext';
 import SEO from '../components/SEO';
 import ScrollReveal from '../components/ScrollReveal';
 import LottiePlayer from '../components/LottiePlayer';
@@ -34,7 +34,7 @@ export default function StartupsDirectoryPage() {
     }
 
     try {
-      const res = await fetch('/api/startups', {
+      const res = await fetch(`${API_BASE}/startups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

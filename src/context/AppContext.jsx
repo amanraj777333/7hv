@@ -3,7 +3,10 @@ import { INITIAL_EVENTS } from '../data/initialData';
 
 const AppContext = createContext();
 
-const API_BASE = '/api';
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL)
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : '/api';
+export { API_BASE };
 export const OFFICIAL_WHATSAPP_LINK = 'https://chat.whatsapp.com/IzTObDPm8pw80Hw811RJvC?s=cl&p=a&iam=2';
 
 export function AppProvider({ children }) {

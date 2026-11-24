@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, API_BASE } from '../context/AppContext';
 import SEO from '../components/SEO';
 import LottiePlayer from '../components/LottiePlayer';
 import { Mail, CheckCircle2, ArrowRight, ShieldCheck, Sparkles, Inbox } from 'lucide-react';
@@ -54,7 +54,7 @@ export default function NewsletterPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/subscribers', {
+      const res = await fetch(`${API_BASE}/subscribers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

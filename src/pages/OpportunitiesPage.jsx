@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, API_BASE } from '../context/AppContext';
 import SEO from '../components/SEO';
 import LottiePlayer from '../components/LottiePlayer';
 import { Compass, Search, Plus, Mail, Calendar, MapPin, Tag, CheckCircle2 } from 'lucide-react';
@@ -43,7 +43,7 @@ export default function OpportunitiesPage() {
     }
 
     try {
-      const res = await fetch('/api/opportunities', {
+      const res = await fetch(`${API_BASE}/opportunities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
